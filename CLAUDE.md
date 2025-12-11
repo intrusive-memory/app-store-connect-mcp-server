@@ -123,3 +123,24 @@ This MCP server provides comprehensive support for Xcode Cloud CI/CD operations 
 4. Review issues, test failures, and error messages
 5. Download logs: list_ci_artifacts then download_ci_artifact
 ```
+
+## Development
+
+### Running Tests
+
+```bash
+npm run test           # Run tests once
+npm run test:watch     # Run tests in watch mode
+npm run test:coverage  # Run tests with coverage report
+```
+
+### CI/CD
+
+This project uses GitHub Actions for continuous integration. The CI workflow:
+- Runs on all pull requests to `main`
+- Runs on pushes to `main`
+- Executes the full test suite
+
+Branch protection rules require:
+- All CI tests must pass before merging to `main`
+- Changes must go through pull requests (no direct pushes to `main`)

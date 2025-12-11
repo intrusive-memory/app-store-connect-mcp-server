@@ -83,6 +83,14 @@ This server transforms complex App Store Connect operations into simple conversa
   - List available schemes in Xcode projects and workspaces
   - Integrate with development workflows and CI/CD pipelines
 
+- **Xcode Cloud CI/CD** ✨ **NEW**
+  - List CI products (apps/frameworks configured for Xcode Cloud)
+  - View and manage CI workflows
+  - Monitor build runs with status tracking
+  - Debug build failures with detailed issue reporting
+  - Access test results and build artifacts
+  - Start and cancel build runs programmatically
+
 ## Installation
 
 ### Using Smithery
@@ -571,6 +579,176 @@ List all available schemes in an Xcode project or workspace.
 "Show available schemes for MyApp.xcworkspace"
 ```
 
+### ☁️ Xcode Cloud CI/CD Tools
+
+#### `list_ci_products`
+List all apps/frameworks configured for Xcode Cloud.
+
+**Parameters:**
+- `limit` (optional): Maximum results (default: 100)
+- `include` (optional): Include related resources (primaryRepositories, app, bundleId)
+- `filterProductType` (optional): Filter by APP or FRAMEWORK
+
+**Example:**
+```
+"List all Xcode Cloud products"
+"Show apps configured for Xcode Cloud"
+```
+
+#### `get_ci_product`
+Get details about a specific CI product.
+
+**Parameters:**
+- `productId` (required): The CI product ID
+- `include` (optional): Related resources to include
+
+#### `list_ci_workflows`
+List all workflows for a CI product.
+
+**Parameters:**
+- `productId` (required): The CI product ID
+- `limit` (optional): Maximum results (default: 100)
+
+**Example:**
+```
+"List workflows for CI product PROD123"
+"Show all build workflows for my app"
+```
+
+#### `get_ci_workflow`
+Get details about a specific workflow.
+
+**Parameters:**
+- `workflowId` (required): The workflow ID
+- `include` (optional): Related resources (product, repository, xcodeVersion, macOsVersion)
+
+#### `list_ci_build_runs`
+List build runs for a workflow or product.
+
+**Parameters:**
+- `workflowId` (optional): Filter by workflow ID
+- `productId` (optional): Filter by product ID
+- `limit` (optional): Maximum results (default: 100)
+- `filterExecutionProgress` (optional): PENDING, RUNNING, or COMPLETE
+- `filterCompletionStatus` (optional): SUCCEEDED, FAILED, ERRORED, CANCELED, SKIPPED
+- `include` (optional): Related resources
+- `sort` (optional): Sort by number or createdDate
+
+**Example:**
+```
+"List recent builds for workflow WORKFLOW123"
+"Show failed builds for my app"
+"Get running builds"
+```
+
+#### `get_ci_build_run`
+Get details about a specific build run.
+
+**Parameters:**
+- `buildRunId` (required): The build run ID
+- `include` (optional): Related resources
+
+#### `start_ci_build_run`
+Start a new build run for a workflow.
+
+**Parameters:**
+- `workflowId` (required): The workflow ID
+- `gitReferenceId` (optional): Git branch or tag to build
+- `clean` (optional): Whether to perform a clean build
+
+**Example:**
+```
+"Start a build for workflow WORKFLOW123"
+"Trigger a clean build on the main branch"
+```
+
+#### `cancel_ci_build_run`
+Cancel a running build.
+
+**Parameters:**
+- `buildRunId` (required): The build run ID
+
+#### `list_ci_build_actions`
+List actions (build, test, analyze, archive) for a build run.
+
+**Parameters:**
+- `buildRunId` (required): The build run ID
+- `limit` (optional): Maximum results (default: 100)
+
+#### `get_ci_build_action`
+Get details about a specific build action.
+
+**Parameters:**
+- `actionId` (required): The action ID
+- `include` (optional): Include buildRun relationship
+
+#### `list_ci_issues`
+List errors, warnings, and test failures for a build action.
+
+**Parameters:**
+- `buildActionId` (required): The build action ID
+- `limit` (optional): Maximum results (default: 100)
+
+**Example:**
+```
+"Show errors for build action ACTION123"
+"List all issues from the failed build"
+```
+
+#### `list_ci_test_results`
+List test results for a test action.
+
+**Parameters:**
+- `buildActionId` (required): The build action ID
+- `limit` (optional): Maximum results (default: 100)
+
+#### `list_ci_artifacts`
+List build artifacts (logs, archives) for a build action.
+
+**Parameters:**
+- `buildActionId` (required): The build action ID
+- `limit` (optional): Maximum results (default: 100)
+
+#### `download_ci_artifact`
+Get download URL for an artifact.
+
+**Parameters:**
+- `artifactId` (required): The artifact ID
+
+#### `list_git_references`
+List branches and tags for a repository.
+
+**Parameters:**
+- `repositoryId` (required): The repository ID
+- `limit` (optional): Maximum results (default: 100)
+- `filterKind` (optional): BRANCH or TAG
+
+#### `get_build_runs_summary`
+Get a summary with statistics for recent builds.
+
+**Parameters:**
+- `workflowId` (optional): Filter by workflow ID
+- `productId` (optional): Filter by product ID
+- `limit` (optional): Maximum results (default: 50)
+
+**Example:**
+```
+"Show build summary for my app"
+"Get CI statistics for workflow WORKFLOW123"
+```
+
+#### `get_build_failure_details`
+Get detailed failure information for debugging.
+
+**Parameters:**
+- `buildRunId` (required): The build run ID
+
+**Example:**
+```
+"Why did build BUILD123 fail?"
+"Show failure details for the last failed build"
+```
+
 ## Error Handling
 
 The server implements proper error handling for:
@@ -590,11 +768,25 @@ npm install
 npm run build
 
 # Run tests
-npm test
+npm run test
 
-# Run type checking
-npm run type-check
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
 ```
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch from `development`
+3. Make your changes
+4. Run tests: `npm run test`
+5. Push to your fork and create a PR to `development`
+6. Once approved and CI passes, changes will be merged to `main`
+
+Branch protection rules require all CI tests to pass before merging to `main`.
 
 ## License
 
