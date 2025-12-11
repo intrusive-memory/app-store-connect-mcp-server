@@ -5,13 +5,19 @@ import { ListToolsRequestSchema, CallToolRequestSchema, ErrorCode, McpError } fr
 import axios from 'axios';
 import { AppStoreConnectClient } from './services/index.js';
 import { AppHandlers, BetaHandlers, BundleHandlers, DeviceHandlers, UserHandlers, AnalyticsHandlers, XcodeHandlers, LocalizationHandlers } from './handlers/index.js';
-// Load environment variables
-const config = {
-    keyId: process.env.APP_STORE_CONNECT_KEY_ID,
-    issuerId: process.env.APP_STORE_CONNECT_ISSUER_ID,
-    privateKeyPath: process.env.APP_STORE_CONNECT_P8_PATH,
-    vendorNumber: process.env.APP_STORE_CONNECT_VENDOR_NUMBER, // Optional for sales/finance reports
-};
+import { getConfig, ConfigurationError } from './config.js';
+// Validate configuration at startup - fail fast with clear error messages
+let config;
+try {
+    config = getConfig();
+}
+catch (error) {
+    if (error instanceof ConfigurationError) {
+        console.error(`\n❌ Configuration Error:\n${error.message}\n`);
+        process.exit(1);
+    }
+    throw error;
+}
 class AppStoreConnectServer {
     server;
     client;
