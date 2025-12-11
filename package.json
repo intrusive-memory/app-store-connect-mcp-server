@@ -5,7 +5,10 @@
   "scripts": {
     "build": "tsc && shx chmod +x dist/src/*.js",
     "start": "node dist/src/index.js",
-    "setup": "node dist/src/setup.js"
+    "setup": "node dist/src/setup.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "bin": {
     "appstore-connect-mcp": "./dist/src/index.js",
@@ -23,6 +26,7 @@
     "@types/jsonwebtoken": "^9.0.0",
     "@types/node": "^18.19.130",
     "shx": "^0.3.4",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "vitest": "^1.6.0"
   }
 }
