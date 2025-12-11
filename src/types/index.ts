@@ -24,3 +24,6 @@ export * from './screenshots.js';
 
 // Localization types
 export * from './localizations.js';
+
+// Xcode Cloud types
+export * from './xcodeCloud.js';

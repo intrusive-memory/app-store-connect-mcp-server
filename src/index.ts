@@ -20,7 +20,8 @@ import {
   UserHandlers,
   AnalyticsHandlers,
   XcodeHandlers,
-  LocalizationHandlers
+  LocalizationHandlers,
+  XcodeCloudHandlers
 } from './handlers/index.js';
 import { getConfig, ConfigurationError, ENV_VARS } from './config.js';
 
@@ -47,6 +48,7 @@ class AppStoreConnectServer {
   private analyticsHandlers: AnalyticsHandlers;
   private xcodeHandlers: XcodeHandlers;
   private localizationHandlers: LocalizationHandlers;
+  private xcodeCloudHandlers: XcodeCloudHandlers;
 
   constructor() {
     this.server = new Server({
@@ -67,6 +69,7 @@ class AppStoreConnectServer {
     this.analyticsHandlers = new AnalyticsHandlers(this.client, config);
     this.xcodeHandlers = new XcodeHandlers();
     this.localizationHandlers = new LocalizationHandlers(this.client);
+    this.xcodeCloudHandlers = new XcodeCloudHandlers(this.client);
 
     this.setupHandlers();
   }
@@ -818,7 +821,7 @@ class AppStoreConnectServer {
           }
         },
 
-        // Xcode Development Tools
+        // Xcode Development Tools (Local)
         {
           name: "list_schemes",
           description: "List all available schemes in an Xcode project or workspace",
@@ -831,6 +834,382 @@ class AppStoreConnectServer {
               }
             },
             required: ["projectPath"]
+          }
+        },
+
+        // Xcode Cloud CI/CD Tools
+        {
+          name: "list_ci_products",
+          description: "List all Xcode Cloud products (apps/frameworks configured for CI/CD)",
+          inputSchema: {
+            type: "object",
+            properties: {
+              limit: {
+                type: "number",
+                description: "Maximum number of products to return (default: 100)",
+                minimum: 1,
+                maximum: 200
+              },
+              include: {
+                type: "array",
+                items: {
+                  type: "string",
+                  enum: ["primaryRepositories", "app", "bundleId"]
+                },
+                description: "Related resources to include in the response"
+              },
+              filterProductType: {
+                type: "string",
+                enum: ["APP", "FRAMEWORK"],
+                description: "Filter by product type"
+              }
+            }
+          }
+        },
+        {
+          name: "get_ci_product",
+          description: "Get detailed information about a specific Xcode Cloud product",
+          inputSchema: {
+            type: "object",
+            properties: {
+              productId: {
+                type: "string",
+                description: "The ID of the CI product"
+              },
+              include: {
+                type: "array",
+                items: {
+                  type: "string",
+                  enum: ["primaryRepositories", "app", "bundleId"]
+                },
+                description: "Related resources to include in the response"
+              }
+            },
+            required: ["productId"]
+          }
+        },
+        {
+          name: "list_ci_workflows",
+          description: "List all Xcode Cloud workflows for a product",
+          inputSchema: {
+            type: "object",
+            properties: {
+              productId: {
+                type: "string",
+                description: "The ID of the CI product"
+              },
+              limit: {
+                type: "number",
+                description: "Maximum number of workflows to return (default: 100)",
+                minimum: 1,
+                maximum: 200
+              }
+            },
+            required: ["productId"]
+          }
+        },
+        {
+          name: "get_ci_workflow",
+          description: "Get detailed information about a specific Xcode Cloud workflow",
+          inputSchema: {
+            type: "object",
+            properties: {
+              workflowId: {
+                type: "string",
+                description: "The ID of the CI workflow"
+              },
+              include: {
+                type: "array",
+                items: {
+                  type: "string",
+                  enum: ["product", "repository", "xcodeVersion", "macOsVersion"]
+                },
+                description: "Related resources to include in the response"
+              }
+            },
+            required: ["workflowId"]
+          }
+        },
+        {
+          name: "list_ci_build_runs",
+          description: "List Xcode Cloud build runs for a workflow or product",
+          inputSchema: {
+            type: "object",
+            properties: {
+              workflowId: {
+                type: "string",
+                description: "The ID of the workflow (provide this OR productId)"
+              },
+              productId: {
+                type: "string",
+                description: "The ID of the product (provide this OR workflowId)"
+              },
+              limit: {
+                type: "number",
+                description: "Maximum number of build runs to return (default: 100)",
+                minimum: 1,
+                maximum: 200
+              },
+              filterExecutionProgress: {
+                type: "string",
+                enum: ["PENDING", "RUNNING", "COMPLETE"],
+                description: "Filter by execution progress"
+              },
+              filterCompletionStatus: {
+                type: "string",
+                enum: ["SUCCEEDED", "FAILED", "ERRORED", "CANCELED", "SKIPPED"],
+                description: "Filter by completion status"
+              },
+              include: {
+                type: "array",
+                items: {
+                  type: "string",
+                  enum: ["builds", "workflow", "product", "sourceBranchOrTag", "destinationBranch", "pullRequest"]
+                },
+                description: "Related resources to include in the response"
+              },
+              sort: {
+                type: "string",
+                enum: ["number", "-number", "createdDate", "-createdDate"],
+                description: "Sort order (prefix with - for descending)"
+              }
+            }
+          }
+        },
+        {
+          name: "get_ci_build_run",
+          description: "Get detailed information about a specific Xcode Cloud build run",
+          inputSchema: {
+            type: "object",
+            properties: {
+              buildRunId: {
+                type: "string",
+                description: "The ID of the build run"
+              },
+              include: {
+                type: "array",
+                items: {
+                  type: "string",
+                  enum: ["builds", "workflow", "product", "sourceBranchOrTag", "destinationBranch", "pullRequest"]
+                },
+                description: "Related resources to include in the response"
+              }
+            },
+            required: ["buildRunId"]
+          }
+        },
+        {
+          name: "start_ci_build_run",
+          description: "Start a new Xcode Cloud build run for a workflow",
+          inputSchema: {
+            type: "object",
+            properties: {
+              workflowId: {
+                type: "string",
+                description: "The ID of the workflow to run"
+              },
+              gitReferenceId: {
+                type: "string",
+                description: "The ID of the git reference (branch/tag) to build (optional)"
+              },
+              clean: {
+                type: "boolean",
+                description: "Whether to perform a clean build (optional)"
+              }
+            },
+            required: ["workflowId"]
+          }
+        },
+        {
+          name: "cancel_ci_build_run",
+          description: "Cancel a running Xcode Cloud build",
+          inputSchema: {
+            type: "object",
+            properties: {
+              buildRunId: {
+                type: "string",
+                description: "The ID of the build run to cancel"
+              }
+            },
+            required: ["buildRunId"]
+          }
+        },
+        {
+          name: "list_ci_build_actions",
+          description: "List all build actions (build, test, analyze, archive) for a build run",
+          inputSchema: {
+            type: "object",
+            properties: {
+              buildRunId: {
+                type: "string",
+                description: "The ID of the build run"
+              },
+              limit: {
+                type: "number",
+                description: "Maximum number of actions to return (default: 100)",
+                minimum: 1,
+                maximum: 200
+              }
+            },
+            required: ["buildRunId"]
+          }
+        },
+        {
+          name: "get_ci_build_action",
+          description: "Get detailed information about a specific build action",
+          inputSchema: {
+            type: "object",
+            properties: {
+              actionId: {
+                type: "string",
+                description: "The ID of the build action"
+              },
+              include: {
+                type: "array",
+                items: {
+                  type: "string",
+                  enum: ["buildRun"]
+                },
+                description: "Related resources to include in the response"
+              }
+            },
+            required: ["actionId"]
+          }
+        },
+        {
+          name: "list_ci_issues",
+          description: "List all issues (errors, warnings, test failures) for a build action",
+          inputSchema: {
+            type: "object",
+            properties: {
+              buildActionId: {
+                type: "string",
+                description: "The ID of the build action"
+              },
+              limit: {
+                type: "number",
+                description: "Maximum number of issues to return (default: 100)",
+                minimum: 1,
+                maximum: 200
+              }
+            },
+            required: ["buildActionId"]
+          }
+        },
+        {
+          name: "list_ci_test_results",
+          description: "List all test results for a test action",
+          inputSchema: {
+            type: "object",
+            properties: {
+              buildActionId: {
+                type: "string",
+                description: "The ID of the test action"
+              },
+              limit: {
+                type: "number",
+                description: "Maximum number of test results to return (default: 100)",
+                minimum: 1,
+                maximum: 200
+              }
+            },
+            required: ["buildActionId"]
+          }
+        },
+        {
+          name: "list_ci_artifacts",
+          description: "List all artifacts (logs, archives) for a build action",
+          inputSchema: {
+            type: "object",
+            properties: {
+              buildActionId: {
+                type: "string",
+                description: "The ID of the build action"
+              },
+              limit: {
+                type: "number",
+                description: "Maximum number of artifacts to return (default: 100)",
+                minimum: 1,
+                maximum: 200
+              }
+            },
+            required: ["buildActionId"]
+          }
+        },
+        {
+          name: "download_ci_artifact",
+          description: "Get download URL for a build artifact",
+          inputSchema: {
+            type: "object",
+            properties: {
+              artifactId: {
+                type: "string",
+                description: "The ID of the artifact to download"
+              }
+            },
+            required: ["artifactId"]
+          }
+        },
+        {
+          name: "list_git_references",
+          description: "List git branches and tags for a repository",
+          inputSchema: {
+            type: "object",
+            properties: {
+              repositoryId: {
+                type: "string",
+                description: "The ID of the SCM repository"
+              },
+              limit: {
+                type: "number",
+                description: "Maximum number of references to return (default: 100)",
+                minimum: 1,
+                maximum: 200
+              },
+              filterKind: {
+                type: "string",
+                enum: ["BRANCH", "TAG"],
+                description: "Filter by reference type (branch or tag)"
+              }
+            },
+            required: ["repositoryId"]
+          }
+        },
+        {
+          name: "get_build_runs_summary",
+          description: "Get a summary of recent build runs with statistics (useful for CI/CD monitoring)",
+          inputSchema: {
+            type: "object",
+            properties: {
+              workflowId: {
+                type: "string",
+                description: "The ID of the workflow (provide this OR productId)"
+              },
+              productId: {
+                type: "string",
+                description: "The ID of the product (provide this OR workflowId)"
+              },
+              limit: {
+                type: "number",
+                description: "Maximum number of build runs to include (default: 50)",
+                minimum: 1,
+                maximum: 200
+              }
+            }
+          }
+        },
+        {
+          name: "get_build_failure_details",
+          description: "Get detailed failure information for a failed build run (useful for debugging)",
+          inputSchema: {
+            type: "object",
+            properties: {
+              buildRunId: {
+                type: "string",
+                description: "The ID of the failed build run"
+              }
+            },
+            required: ["buildRunId"]
           }
         }
     ];
@@ -1035,9 +1414,62 @@ class AppStoreConnectServer {
             }
             return { toolResult: await this.analyticsHandlers.downloadFinanceReport(args as any) };
 
-          // Xcode Development Tools
+          // Xcode Development Tools (Local)
           case "list_schemes":
             return { toolResult: await this.xcodeHandlers.listSchemes(args as any) };
+
+          // Xcode Cloud CI/CD Tools
+          case "list_ci_products":
+            return formatResponse(await this.xcodeCloudHandlers.listCiProducts(args as any));
+
+          case "get_ci_product":
+            return formatResponse(await this.xcodeCloudHandlers.getCiProduct(args as any));
+
+          case "list_ci_workflows":
+            return formatResponse(await this.xcodeCloudHandlers.listCiWorkflows(args as any));
+
+          case "get_ci_workflow":
+            return formatResponse(await this.xcodeCloudHandlers.getCiWorkflow(args as any));
+
+          case "list_ci_build_runs":
+            return formatResponse(await this.xcodeCloudHandlers.listCiBuildRuns(args as any));
+
+          case "get_ci_build_run":
+            return formatResponse(await this.xcodeCloudHandlers.getCiBuildRun(args as any));
+
+          case "start_ci_build_run":
+            return formatResponse(await this.xcodeCloudHandlers.startCiBuildRun(args as any));
+
+          case "cancel_ci_build_run":
+            await this.xcodeCloudHandlers.cancelCiBuildRun(args as any);
+            return formatResponse({ success: true, message: "Build run cancelled" });
+
+          case "list_ci_build_actions":
+            return formatResponse(await this.xcodeCloudHandlers.listCiBuildActions(args as any));
+
+          case "get_ci_build_action":
+            return formatResponse(await this.xcodeCloudHandlers.getCiBuildAction(args as any));
+
+          case "list_ci_issues":
+            return formatResponse(await this.xcodeCloudHandlers.listCiIssues(args as any));
+
+          case "list_ci_test_results":
+            return formatResponse(await this.xcodeCloudHandlers.listCiTestResults(args as any));
+
+          case "list_ci_artifacts":
+            return formatResponse(await this.xcodeCloudHandlers.listCiArtifacts(args as any));
+
+          case "download_ci_artifact":
+            return formatResponse(await this.xcodeCloudHandlers.downloadCiArtifact(args as any));
+
+          case "list_git_references":
+            return formatResponse(await this.xcodeCloudHandlers.listGitReferences(args as any));
+
+          case "get_build_runs_summary":
+            return formatResponse(await this.xcodeCloudHandlers.getBuildRunsSummary(args as any));
+
+          case "get_build_failure_details":
+            return formatResponse(await this.xcodeCloudHandlers.getBuildFailureDetails(args as any));
 
           default:
             throw new McpError(
