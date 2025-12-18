@@ -978,7 +978,7 @@ class AppStoreConnectServer {
         },
         {
           name: "get_ci_build_run",
-          description: "Get detailed information about a specific Xcode Cloud build run",
+          description: "Get detailed information about a specific Xcode Cloud build run. Use errorsOnly to reduce context by returning only essential error summary data.",
           inputSchema: {
             type: "object",
             properties: {
@@ -992,7 +992,12 @@ class AppStoreConnectServer {
                   type: "string",
                   enum: ["builds", "workflow", "product", "sourceBranchOrTag", "destinationBranch", "pullRequest"]
                 },
-                description: "Related resources to include in the response"
+                description: "Related resources to include in the response (ignored when errorsOnly is true)"
+              },
+              errorsOnly: {
+                type: "boolean",
+                description: "If true, return only essential build info and error counts (reduces context size). Default: false",
+                default: false
               }
             },
             required: ["buildRunId"]
@@ -1036,7 +1041,7 @@ class AppStoreConnectServer {
         },
         {
           name: "list_ci_build_actions",
-          description: "List all build actions (build, test, analyze, archive) for a build run",
+          description: "List all build actions (build, test, analyze, archive) for a build run. Use errorsOnly to reduce context by filtering to only failed/errored actions.",
           inputSchema: {
             type: "object",
             properties: {
@@ -1049,6 +1054,11 @@ class AppStoreConnectServer {
                 description: "Maximum number of actions to return (default: 100)",
                 minimum: 1,
                 maximum: 200
+              },
+              errorsOnly: {
+                type: "boolean",
+                description: "If true, only return failed or errored actions (reduces context size). Default: false",
+                default: false
               }
             },
             required: ["buildRunId"]
@@ -1078,7 +1088,7 @@ class AppStoreConnectServer {
         },
         {
           name: "list_ci_issues",
-          description: "List all issues (errors, warnings, test failures) for a build action",
+          description: "List all issues (errors, warnings, test failures) for a build action. Use errorsOnly to reduce context by filtering to only errors (excludes warnings).",
           inputSchema: {
             type: "object",
             properties: {
@@ -1091,6 +1101,11 @@ class AppStoreConnectServer {
                 description: "Maximum number of issues to return (default: 100)",
                 minimum: 1,
                 maximum: 200
+              },
+              errorsOnly: {
+                type: "boolean",
+                description: "If true, only return errors and critical issues (excludes warnings to reduce context size). Default: false",
+                default: false
               }
             },
             required: ["buildActionId"]
@@ -1098,7 +1113,7 @@ class AppStoreConnectServer {
         },
         {
           name: "list_ci_test_results",
-          description: "List all test results for a test action",
+          description: "List all test results for a test action. Use errorsOnly to reduce context by filtering to only failed tests.",
           inputSchema: {
             type: "object",
             properties: {
@@ -1111,6 +1126,11 @@ class AppStoreConnectServer {
                 description: "Maximum number of test results to return (default: 100)",
                 minimum: 1,
                 maximum: 200
+              },
+              errorsOnly: {
+                type: "boolean",
+                description: "If true, only return failed tests (reduces context size). Default: false",
+                default: false
               }
             },
             required: ["buildActionId"]

@@ -192,18 +192,41 @@ export class XcodeCloudHandlers {
   async getCiBuildRun(args: {
     buildRunId: string;
     include?: Array<'builds' | 'workflow' | 'product' | 'sourceBranchOrTag' | 'destinationBranch' | 'pullRequest'>;
+    errorsOnly?: boolean;
   }): Promise<CiBuildRunResponse> {
-    const { buildRunId, include } = args;
+    const { buildRunId, include, errorsOnly = false } = args;
 
     validateRequired(args, ['buildRunId']);
 
     const params: Record<string, any> = {};
 
-    if (include && include.length > 0) {
+    // Only include relationships if errorsOnly is false
+    if (include && include.length > 0 && !errorsOnly) {
       params.include = include.join(',');
     }
 
-    return this.client.get<CiBuildRunResponse>(`/ciBuildRuns/${buildRunId}`, params);
+    const response = await this.client.get<CiBuildRunResponse>(`/ciBuildRuns/${buildRunId}`, params);
+
+    // Return simplified response when errorsOnly is true
+    if (errorsOnly) {
+      // Strip out included data and only keep essential build run info
+      const { data } = response;
+      return {
+        data: {
+          ...data,
+          attributes: {
+            number: data.attributes.number,
+            executionProgress: data.attributes.executionProgress,
+            completionStatus: data.attributes.completionStatus,
+            issueCounts: data.attributes.issueCounts,
+            startedDate: data.attributes.startedDate,
+            finishedDate: data.attributes.finishedDate,
+          } as any,
+        },
+      };
+    }
+
+    return response;
   }
 
   /**
@@ -270,15 +293,27 @@ export class XcodeCloudHandlers {
   async listCiBuildActions(args: {
     buildRunId: string;
     limit?: number;
+    errorsOnly?: boolean;
   }): Promise<ListCiBuildActionsResponse> {
-    const { buildRunId, limit = 100 } = args;
+    const { buildRunId, limit = 100, errorsOnly = false } = args;
 
     validateRequired(args, ['buildRunId']);
 
-    return this.client.get<ListCiBuildActionsResponse>(
+    const response = await this.client.get<ListCiBuildActionsResponse>(
       `/ciBuildRuns/${buildRunId}/actions`,
       { limit: sanitizeLimit(limit) }
     );
+
+    // Filter to only failed/errored actions if errorsOnly is true
+    if (errorsOnly) {
+      response.data = response.data.filter(
+        (action) =>
+          action.attributes.completionStatus === 'FAILED' ||
+          action.attributes.completionStatus === 'ERRORED'
+      );
+    }
+
+    return response;
   }
 
   /**
@@ -311,15 +346,25 @@ export class XcodeCloudHandlers {
   async listCiIssues(args: {
     buildActionId: string;
     limit?: number;
+    errorsOnly?: boolean;
   }): Promise<ListCiIssuesResponse> {
-    const { buildActionId, limit = 100 } = args;
+    const { buildActionId, limit = 100, errorsOnly = false } = args;
 
     validateRequired(args, ['buildActionId']);
 
-    return this.client.get<ListCiIssuesResponse>(
+    const response = await this.client.get<ListCiIssuesResponse>(
       `/ciBuildActions/${buildActionId}/issues`,
       { limit: sanitizeLimit(limit) }
     );
+
+    // Filter to only errors if errorsOnly is true (exclude warnings, analyzer warnings, and test failures)
+    if (errorsOnly) {
+      response.data = response.data.filter(
+        (issue) => issue.attributes.issueType === 'ERROR'
+      );
+    }
+
+    return response;
   }
 
   // ============================================================================
@@ -332,15 +377,25 @@ export class XcodeCloudHandlers {
   async listCiTestResults(args: {
     buildActionId: string;
     limit?: number;
+    errorsOnly?: boolean;
   }): Promise<ListCiTestResultsResponse> {
-    const { buildActionId, limit = 100 } = args;
+    const { buildActionId, limit = 100, errorsOnly = false } = args;
 
     validateRequired(args, ['buildActionId']);
 
-    return this.client.get<ListCiTestResultsResponse>(
+    const response = await this.client.get<ListCiTestResultsResponse>(
       `/ciBuildActions/${buildActionId}/testResults`,
       { limit: sanitizeLimit(limit) }
     );
+
+    // Filter to only failed tests if errorsOnly is true
+    if (errorsOnly) {
+      response.data = response.data.filter(
+        (testResult) => testResult.attributes.status === 'FAILURE'
+      );
+    }
+
+    return response;
   }
 
   // ============================================================================
